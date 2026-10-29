@@ -1,0 +1,81 @@
+# snowdrift configuration. Copy this file, then edit it for your platforms.
+# Secrets never go in this file: anything ending in _env names an environment variable.
+
+[run]
+reference = "teradata"                    # the platform every other one should match (usually the source system)
+targets = ["snowflake", "databricks"]     # platforms that receive copies of the reference tables
+tables = ["CUSTOMERS", "JOBS", "INVOICES"] # leave empty to check every table the sources return
+ignore_columns = ["LOAD_TS", "BATCH_ID"]  # columns that only exist in the targets (load audit columns)
+min_severity = "warning"                  # info | warning | breaking: anything lower is not reported
+store = "drift.db"                        # local SQLite history (snapshots + events)
+
+# ---- Where metadata comes from ---------------------------------------------
+# type = "csv" | "teradata_export" | "snowflake" | "databricks" | "teradata"
+# work_schemas: schemas holding staging/work copies; they're compared to the final tables.
+
+[sources.teradata]
+type = "teradata_export"                  # a scheduled export of sql/teradata_columns.sql
+path = "exports/teradata_columns.csv"
+
+[sources.snowflake]
+type = "snowflake"
+database = "ANALYTICS"
+schemas = ["PUBLIC", "STAGE"]
+work_schemas = ["STAGE"]
+[sources.snowflake.connection]            # passed to snowflake.connector.connect()
+account = "my_account"
+user_env = "SNOWFLAKE_USER"
+password_env = "SNOWFLAKE_PASSWORD"
+warehouse = "XS_WH"
+
+[sources.databricks]
+type = "databricks"
+catalog = "main"
+schemas = ["landscape", "stage"]
+work_schemas = ["stage"]
+[sources.databricks.connection]           # passed to databricks.sql.connect()
+server_hostname = "adb-1234567890.0.azuredatabricks.net"
+http_path = "/sql/1.0/warehouses/abc123"
+access_token_env = "DATABRICKS_TOKEN"
+
+# ---- Expected settings ------------------------------------------------------
+[collation]
+snowflake = "en-ci"
+
+# ---- What counts as "breaks something" --------------------------------------
+[impact]
+full_refresh = ["CUSTOMERS"]              # tables reloaded in full each run
+stored_sql_dir = "stored_sql"             # hand-written MERGEs / procedures, one .sql file each
+views_dir = "views"                       # view definitions, one .sql file each
+
+[impact.key_columns]                      # merge/upsert keys per table
+JOBS = ["JOB_ID"]
+INVOICES = ["INVOICE_ID"]
+
+# ---- AI explanations (optional) ---------------------------------------------
+# provider = "none" uses plain-English templates. Any OpenAI-compatible endpoint works,
+# including Databricks model serving: base_url = "https://<workspace>/serving-endpoints".
+[ai]
+provider = "none"
+# provider = "openai_compatible"
+# base_url = "https://adb-1234567890.0.azuredatabricks.net/serving-endpoints"
+# model = "my-chat-endpoint"
+# api_key_env = "DATABRICKS_TOKEN"
+
+# ---- Alerts -----------------------------------------------------------------
+[alerts]
+console = true
+
+# [alerts.email]
+# host = "smtp.example.com"
+# from = "drift-bot@example.com"
+# to = ["data-team@example.com"]
+
+# [alerts.teams]
+# webhook_env = "TEAMS_WEBHOOK_URL"       # from a Teams "post to a channel when a webhook request is received" workflow
+
+# [alerts.servicenow]                     # one incident per table with NEW breaking drift
+# instance_url = "https://example.service-now.com"
+# assignment_group = "Data Platform"
+# user_env = "SNOW_USER"
+# password_env = "SNOW_PASSWORD"

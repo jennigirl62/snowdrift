@@ -1,0 +1,43 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "snowdrift"
+version = "0.1.0"
+description = "Catch schema drift across Teradata, Snowflake and Databricks before it breaks a load, explain it, and draft the fix."
+readme = "README.md"
+license = { text = "MIT" }
+requires-python = ">=3.12"
+dependencies = []  # standard library only; database drivers are optional extras
+keywords = ["schema drift", "data engineering", "snowflake", "databricks", "teradata", "llm", "agent"]
+classifiers = [
+  "Programming Language :: Python :: 3",
+  "License :: OSI Approved :: MIT License",
+  "Topic :: Database",
+]
+
+[project.optional-dependencies]
+snowflake = ["snowflake-connector-python"]
+databricks = ["databricks-sql-connector"]
+teradata = ["teradatasql"]
+dev = ["pytest", "ruff"]
+
+[project.scripts]
+snowdrift = "snowdrift.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+snowdrift = ["demo_data/**/*.csv", "demo_data/**/*.sql"]
+
+[tool.ruff]
+line-length = 130
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "B", "UP"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
